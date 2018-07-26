@@ -20,7 +20,7 @@ createMiddleware(responseHandler: (response) async {
       .read()
       .fold(<int>[], (result, bytes) => result..addAll(bytes)));
 
-  newHeaders[HttpHeaders.CONTENT_ENCODING] = 'gzip';
-  newHeaders[HttpHeaders.CONTENT_LENGTH] = b.length.toString();
+  newHeaders[HttpHeaders.contentEncodingHeader] = 'gzip';
+  newHeaders[HttpHeaders.contentLengthHeader] = b.length.toString();
   return response.change(headers: newHeaders, body: b);
 });
