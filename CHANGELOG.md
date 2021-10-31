@@ -7,6 +7,8 @@
   - `gzipEncodeResponse`: converts a `Response` to a `gzip` encoding response.
   - `isAlreadyCompressedContentType` and `isAlreadyCompressedExtension`: checks if is already compressed.
 - Optimized bytes reading and compression.
+- Added an example.
+- Improved API documentation.
 - lints: ^1.0.0
   - Using `lints/recommended.yaml`
 - test: ^1.16.0
