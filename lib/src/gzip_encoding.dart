@@ -8,7 +8,7 @@ import 'package:shelf/shelf.dart';
 /// Using level 4, since have almost the same compression ratio of normal
 /// texting content, but with a lower CPU usage. This is the recommended
 /// for live data compression with `gzip`.
-final int defaultGzipEncodingCompressionLevel = 4;
+const int defaultGzipEncodingCompressionLevel = 4;
 
 final _defaultGzipEncoder =
     ZLibEncoder(gzip: true, level: defaultGzipEncodingCompressionLevel);
@@ -22,7 +22,8 @@ final Middleware gzipMiddleware = createGzipMiddleware();
 /// - The [compressionLevel] for the `gzip` encoder. Default: 4
 /// - If [addCompressionRatioHeader] is `true`, add header `X-Compression-Ratio`.
 Middleware createGzipMiddleware(
-    {int compressionLevel = 4, bool addCompressionRatioHeader = true}) {
+    {int compressionLevel = defaultGzipEncodingCompressionLevel,
+    bool addCompressionRatioHeader = true}) {
   return (Handler innerHandler) {
     return (request) {
       if (!acceptsGzipEncoding(request)) {
@@ -47,7 +48,8 @@ bool acceptsGzipEncoding(Request request) {
 ///
 /// See [createGzipMiddleware].
 FutureOr<Response> gzipEncodeResponse(Response response,
-    {int compressionLevel = 4, bool addCompressionRatioHeader = true}) async {
+    {int compressionLevel = defaultGzipEncodingCompressionLevel,
+    bool addCompressionRatioHeader = true}) async {
   if (!canGzipEncodeResponse(response)) {
     return response;
   }
