@@ -8,10 +8,15 @@ import 'package:shelf/shelf.dart';
 /// Using level 4, since have almost the same compression ratio of normal
 /// texting content, but with a lower CPU usage. This is the recommended
 /// for live data compression with `gzip`.
-const int defaultGzipEncodingCompressionLevel = 4;
+const int _defaultGzipCompressionLevel = 4;
+
+/// A body with less than 512 bytes will have almost no benefit to be
+/// compressed by `Gzip`, since a `gzip` encoded response will add an extra
+/// header to the HTTP protocol and extra `Gzip` bytes to the compressed data.
+const int _defaultMinimalGzipContentLength = 512;
 
 final _defaultGzipEncoder =
-    ZLibEncoder(gzip: true, level: defaultGzipEncodingCompressionLevel);
+    ZLibEncoder(gzip: true, level: _defaultGzipCompressionLevel);
 
 /// The default `gzip` encoding [Middleware].
 final Middleware gzipMiddleware = createGzipMiddleware();
@@ -19,10 +24,17 @@ final Middleware gzipMiddleware = createGzipMiddleware();
 /// Converts a [Response] to a `gzip` encoding
 /// (only if the [Request] [acceptsGzipEncoding]).
 ///
+/// - [minimalGzipContentLength] is the minimal size for a content to be
+///   compressed. Default to `512`.
+/// - [alreadyCompressedContentType] is a function that returns `true` if the
+///   passed `contentType` is already compressed, like a `PNG`, `JPEG` or `Zip`.
+///   Defaults to [isAlreadyCompressedContentType].
 /// - The [compressionLevel] for the `gzip` encoder. Default: 4
 /// - If [addCompressionRatioHeader] is `true`, add header `X-Compression-Ratio`.
 Middleware createGzipMiddleware(
-    {int compressionLevel = defaultGzipEncodingCompressionLevel,
+    {int minimalGzipContentLength = _defaultMinimalGzipContentLength,
+    _AlreadyCompressedContentType? alreadyCompressedContentType,
+    int compressionLevel = _defaultGzipCompressionLevel,
     bool addCompressionRatioHeader = true}) {
   return (Handler innerHandler) {
     return (request) {
@@ -31,6 +43,8 @@ Middleware createGzipMiddleware(
       }
       return Future.sync(() => innerHandler(request)).then((response) =>
           gzipEncodeResponse(response,
+              minimalGzipContentLength: minimalGzipContentLength,
+              alreadyCompressedContentType: alreadyCompressedContentType,
               compressionLevel: compressionLevel,
               addCompressionRatioHeader: addCompressionRatioHeader));
     };
@@ -46,11 +60,23 @@ bool acceptsGzipEncoding(Request request) {
 /// Converts [response] to a `gzip` encoding response.
 /// Checks [canGzipEncodeResponse].
 ///
+/// - [minimalGzipContentLength] is the minimal size for a content to be
+///   compressed. Default to `512`.
+/// - [alreadyCompressedContentType] is a function that returns `true` if the
+///   passed `contentType` is already compressed, like a `PNG`, `JPEG` or `Zip`.
+///   Defaults to [isAlreadyCompressedContentType].
+/// - If [addCompressionRatioHeader] is `true` it adds the header
+///   `X-Compression-Ratio`, with compression info, e.g.: `0.55 (550/1000)`
+///
 /// See [createGzipMiddleware].
 FutureOr<Response> gzipEncodeResponse(Response response,
-    {int compressionLevel = defaultGzipEncodingCompressionLevel,
+    {int minimalGzipContentLength = _defaultMinimalGzipContentLength,
+    _AlreadyCompressedContentType? alreadyCompressedContentType,
+    int compressionLevel = _defaultGzipCompressionLevel,
     bool addCompressionRatioHeader = true}) async {
-  if (!canGzipEncodeResponse(response)) {
+  if (!canGzipEncodeResponse(response,
+      minimalGzipContentLength: minimalGzipContentLength,
+      alreadyCompressedContentType: alreadyCompressedContentType)) {
     return response;
   }
 
@@ -61,7 +87,7 @@ FutureOr<Response> gzipEncodeResponse(Response response,
       _BytesBuffer(bufferInitialCapacity),
       (result, bytes) => result..addAll(bytes));
 
-  var gzipEncoder = compressionLevel == defaultGzipEncodingCompressionLevel
+  var gzipEncoder = compressionLevel == _defaultGzipCompressionLevel
       ? _defaultGzipEncoder
       : ZLibEncoder(gzip: true, level: compressionLevel);
 
@@ -70,25 +96,40 @@ FutureOr<Response> gzipEncodeResponse(Response response,
 
   var bodyLength = bytesBuffer.length;
   var compressedBodyLength = compressedBody.length;
-  var compressionRatio = compressedBodyLength / bodyLength;
 
   var headers = Map<String, String>.from(response.headers);
 
   headers[HttpHeaders.contentEncodingHeader] = 'gzip';
   headers[HttpHeaders.contentLengthHeader] = compressedBodyLength.toString();
-  headers['X-Compression-Ratio'] =
-      '$compressionRatio ($compressedBodyLength/$bodyLength)';
+
+  if (addCompressionRatioHeader) {
+    var compressionRatio = compressedBodyLength / bodyLength;
+
+    headers['X-Compression-Ratio'] =
+        '$compressionRatio ($compressedBodyLength/$bodyLength)';
+  }
 
   return response.change(headers: headers, body: compressedBody);
 }
 
+/// a function that returns `true` if the passed `contentType`
+/// is already compressed.
+typedef _AlreadyCompressedContentType = bool Function(String contentType);
+
 /// Returns `true` if [response] can be compressed.
+///
+/// - [minimalGzipContentLength] is the minimal size for a content to be
+///   compressed. Default to `512`.
+/// - [alreadyCompressedContentType] is a function that returns `true` if the
+///   passed `contentType` is already compressed, like a `PNG`, `JPEG` or `Zip`.
 ///
 /// Checks:
 /// - `Content-Encoding`: if already present, can't change it to `gzip`.
 /// - `Content-Type`: checks if [isAlreadyCompressedContentType].
 /// - `Content-Length`: checks if too small for compression (< 512).
-bool canGzipEncodeResponse(Response response) {
+bool canGzipEncodeResponse(Response response,
+    {int minimalGzipContentLength = _defaultMinimalGzipContentLength,
+    _AlreadyCompressedContentType? alreadyCompressedContentType}) {
   var headerContentEncoding =
       response.headers[HttpHeaders.contentEncodingHeader];
 
@@ -101,16 +142,19 @@ bool canGzipEncodeResponse(Response response) {
   var responseContentLength = response.contentLength;
 
   // A small body will not benefit from being compressed:
-  if (responseContentLength != null && responseContentLength < 512) {
+  if (responseContentLength != null &&
+      responseContentLength < minimalGzipContentLength) {
     return false;
   }
 
   var headerContentType = response.headers[HttpHeaders.contentTypeHeader];
 
   // Do not compress if the `Content-Type` is an already compressed type:
-  if (headerContentType != null &&
-      isAlreadyCompressedContentType(headerContentType)) {
-    return false;
+  if (headerContentType != null) {
+    alreadyCompressedContentType ??= isAlreadyCompressedContentType;
+    if (alreadyCompressedContentType(headerContentType)) {
+      return false;
+    }
   }
 
   return true;
