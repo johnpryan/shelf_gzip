@@ -72,15 +72,8 @@ Please file feature requests and bugs at the [issue tracker][tracker].
 [tracker]: https://github.com/johnpryan/shelf_gzip
 
 # Authors
-
-- Original version:
-
-  John Ryan: [johnpryan@GitHub][github_johnpryan].
-
-
-- Null Safety version (4.0.0):
-
-  Graciliano M. Passos: [gmpassos@GitHub][github_gmpassos].
+- John Ryan: [johnpryan][github_johnpryan].
+- Graciliano M. Passos: [gmpassos][github_gmpassos].
 
 [github_johnpryan]: https://github.com/johnpryan
 [github_gmpassos]: https://github.com/gmpassos
