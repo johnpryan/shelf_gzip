@@ -1,11 +1,14 @@
 name: shelf_gzip
-description: Shelf middleware to GZIP responses
-version: 3.0.0
-author: John Ryan <john.p.ryan4@gmail.com>
+description: Shelf middleware to GZIP encoding responses, with compression level and compression scope by content-type.
+version: 4.0.0
 homepage: https://github.com/johnpryan/shelf_gzip
 
 environment:
-  sdk: '>=2.0.0 <3.0.0'
+  sdk: '>=2.13.0 <3.0.0'
 
 dependencies:
-  shelf: ">=0.7.0 <0.8.0"
+  shelf: ^1.0.0
+
+dev_dependencies:
+  lints: ^1.0.0
+  test: ^1.16.0
