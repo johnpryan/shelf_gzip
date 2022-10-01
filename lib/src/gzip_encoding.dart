@@ -107,7 +107,7 @@ FutureOr<Response> gzipEncodeResponse(Response response,
 
     var compressionRatioStr = '$compressionRatio';
     if (compressionRatioStr.length > 6) {
-      compressionRatioStr = compressionRatioStr.substring(0, 6);
+      compressionRatioStr = compressionRatio.toStringAsFixed(4);
     }
 
     headers['X-Compression-Ratio'] =
