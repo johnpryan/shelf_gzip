@@ -1,6 +1,6 @@
 name: shelf_gzip
 description: Shelf middleware to GZIP encoding responses, with compression level and compression scope by content-type.
-version: 4.0.0
+version: 4.0.1
 homepage: https://github.com/johnpryan/shelf_gzip
 
 environment:

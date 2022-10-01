@@ -1,3 +1,8 @@
+## 4.0.1
+
+- `X-Compression-Ratio`: truncate ratio precision `> 4`.
+- Update `.gitignore`
+
 ## 4.0.0
 
 - Null Safety compliant.
