@@ -2,7 +2,7 @@
 
 [![pub package](https://img.shields.io/pub/v/shelf_gzip.svg?logo=dart&logoColor=00b9fc)](https://pub.dev/packages/shelf_gzip)
 [![Null Safety](https://img.shields.io/badge/null-safety-brightgreen)](https://dart.dev/null-safety)
-[![CI](https://img.shields.io/github/workflow/status/johnpryan/shelf_gzip/Dart%20CI/master?logo=github-actions&logoColor=white)](https://github.com/johnpryan/shelf_gzip/actions)
+[![Dart CI](https://github.com/johnpryan/shelf_gzip/actions/workflows/dart.yml/badge.svg)](https://github.com/johnpryan/shelf_gzip/actions/workflows/dart.yml)
 [![GitHub Tag](https://img.shields.io/github/v/tag/johnpryan/shelf_gzip?logo=git&logoColor=white)](https://github.com/johnpryan/shelf_gzip/releases)
 [![New Commits](https://img.shields.io/github/commits-since/johnpryan/shelf_gzip/latest?logo=git&logoColor=white)](https://github.com/johnpryan/shelf_gzip/network)
 [![Last Commits](https://img.shields.io/github/last-commit/johnpryan/shelf_gzip?logo=git&logoColor=white)](https://github.com/johnpryan/shelf_gzip/commits/master)
