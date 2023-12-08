@@ -1,3 +1,10 @@
+## 4.0.2
+
+- `createGzipMiddleware` and `gzipEncodeResponse`:
+  - Added parameters `addServerTiming` and `serverTimingEntryName`. 
+
+- lints: ^1.0.1
+
 ## 4.0.1
 
 - `X-Compression-Ratio`: truncate ratio precision `> 4`.

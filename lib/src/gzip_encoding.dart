@@ -31,22 +31,33 @@ final Middleware gzipMiddleware = createGzipMiddleware();
 ///   Defaults to [isAlreadyCompressedContentType].
 /// - The [compressionLevel] for the `gzip` encoder. Default: 4
 /// - If [addCompressionRatioHeader] is `true`, add header `X-Compression-Ratio`.
-Middleware createGzipMiddleware(
-    {int minimalGzipContentLength = _defaultMinimalGzipContentLength,
-    _AlreadyCompressedContentType? alreadyCompressedContentType,
-    int compressionLevel = _defaultGzipCompressionLevel,
-    bool addCompressionRatioHeader = true}) {
+/// - If [addServerTiming] is `true`, include or append Gzip encoding timing
+///   to the `server-timing` header.
+/// - [serverTimingEntryName] is the entry name to be used in
+///   the `server-timing` header.
+Middleware createGzipMiddleware({
+  int minimalGzipContentLength = _defaultMinimalGzipContentLength,
+  _AlreadyCompressedContentType? alreadyCompressedContentType,
+  int compressionLevel = _defaultGzipCompressionLevel,
+  bool addCompressionRatioHeader = true,
+  bool addServerTiming = false,
+  String serverTimingEntryName = 'gzip',
+}) {
   return (Handler innerHandler) {
     return (request) {
       if (!acceptsGzipEncoding(request)) {
         return innerHandler(request);
       }
-      return Future.sync(() => innerHandler(request)).then((response) =>
-          gzipEncodeResponse(response,
-              minimalGzipContentLength: minimalGzipContentLength,
-              alreadyCompressedContentType: alreadyCompressedContentType,
-              compressionLevel: compressionLevel,
-              addCompressionRatioHeader: addCompressionRatioHeader));
+      return Future.sync(() => innerHandler(request))
+          .then((response) => gzipEncodeResponse(
+                response,
+                minimalGzipContentLength: minimalGzipContentLength,
+                alreadyCompressedContentType: alreadyCompressedContentType,
+                compressionLevel: compressionLevel,
+                addCompressionRatioHeader: addCompressionRatioHeader,
+                addServerTiming: addServerTiming,
+                serverTimingEntryName: serverTimingEntryName,
+              ));
     };
   };
 }
@@ -67,18 +78,27 @@ bool acceptsGzipEncoding(Request request) {
 ///   Defaults to [isAlreadyCompressedContentType].
 /// - If [addCompressionRatioHeader] is `true` it adds the header
 ///   `X-Compression-Ratio`, with compression info, e.g.: `0.55 (550/1000)`
-///
+/// - If [addServerTiming] is `true`, include or append Gzip encoding timing to
+///   the `server-timing` header.
+/// - [serverTimingEntryName] is the entry name to be used in the
+///   `server-timing` header.
 /// See [createGzipMiddleware].
-FutureOr<Response> gzipEncodeResponse(Response response,
-    {int minimalGzipContentLength = _defaultMinimalGzipContentLength,
-    _AlreadyCompressedContentType? alreadyCompressedContentType,
-    int compressionLevel = _defaultGzipCompressionLevel,
-    bool addCompressionRatioHeader = true}) async {
+FutureOr<Response> gzipEncodeResponse(
+  Response response, {
+  int minimalGzipContentLength = _defaultMinimalGzipContentLength,
+  _AlreadyCompressedContentType? alreadyCompressedContentType,
+  int compressionLevel = _defaultGzipCompressionLevel,
+  bool addCompressionRatioHeader = true,
+  bool addServerTiming = false,
+  String serverTimingEntryName = 'gzip',
+}) async {
   if (!canGzipEncodeResponse(response,
       minimalGzipContentLength: minimalGzipContentLength,
       alreadyCompressedContentType: alreadyCompressedContentType)) {
     return response;
   }
+
+  var gzipInit = DateTime.now();
 
   var bufferInitialCapacity = response.contentLength ?? 1024 * 4;
 
@@ -112,6 +132,23 @@ FutureOr<Response> gzipEncodeResponse(Response response,
 
     headers['X-Compression-Ratio'] =
         '$compressionRatioStr ($compressedBodyLength/$bodyLength)';
+  }
+
+  if (addServerTiming) {
+    var gzipTime = DateTime.now().difference(gzipInit);
+    var dur = gzipTime.inMicroseconds / 1000;
+    var entry = '$serverTimingEntryName;dur=$dur';
+
+    const headerServerTiming = 'server-timing';
+    var serverTiming = headers[headerServerTiming];
+
+    if (serverTiming == null) {
+      serverTiming = entry;
+    } else {
+      serverTiming += ',$entry';
+    }
+
+    headers[headerServerTiming] = serverTiming;
   }
 
   return response.change(headers: headers, body: compressedBody);
@@ -204,29 +241,21 @@ bool isAlreadyCompressedExtension(String extension) {
     case 'png':
     case 'jpg':
     case 'jpeg':
-
     case 'avi':
-
     case 'mp3':
     case 'mp4':
     case 'mpeg':
-
     case 'ogg':
     case 'ogx':
-
     case 'weba':
     case 'webm':
     case 'webp':
-
     case 'epub':
     case 'pdf':
-
     case 'woff':
     case 'woff2':
-
     case 'jar':
     case 'war':
-
     case '7z':
     case 'bz':
     case 'bz2':
