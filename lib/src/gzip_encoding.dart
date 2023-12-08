@@ -135,20 +135,24 @@ FutureOr<Response> gzipEncodeResponse(
   }
 
   if (addServerTiming) {
+    const headerServerTiming = 'server-timing';
+
     var gzipTime = DateTime.now().difference(gzipInit);
     var dur = gzipTime.inMicroseconds / 1000;
-    var entry = '$serverTimingEntryName;dur=$dur';
 
-    const headerServerTiming = 'server-timing';
+    var serverTiming2 = StringBuffer();
+
     var serverTiming = headers[headerServerTiming];
-
-    if (serverTiming == null || serverTiming.isEmpty) {
-      serverTiming = entry;
-    } else {
-      serverTiming += ',$entry';
+    if (serverTiming != null && serverTiming.isNotEmpty) {
+      serverTiming2.write(serverTiming);
+      serverTiming2.write(',');
     }
 
-    headers[headerServerTiming] = serverTiming;
+    serverTiming2.write(serverTimingEntryName);
+    serverTiming2.write(';dur=');
+    serverTiming2.write(dur);
+
+    headers[headerServerTiming] = serverTiming2.toString();
   }
 
   return response.change(headers: headers, body: compressedBody);
