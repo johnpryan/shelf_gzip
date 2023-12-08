@@ -142,7 +142,7 @@ FutureOr<Response> gzipEncodeResponse(
     const headerServerTiming = 'server-timing';
     var serverTiming = headers[headerServerTiming];
 
-    if (serverTiming == null) {
+    if (serverTiming == null || serverTiming.isEmpty) {
       serverTiming = entry;
     } else {
       serverTiming += ',$entry';
