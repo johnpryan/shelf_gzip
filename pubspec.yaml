@@ -4,7 +4,7 @@ version: 4.1.0
 homepage: https://github.com/johnpryan/shelf_gzip
 
 environment:
-  sdk: '>=2.13.0 <3.0.0'
+  sdk: '>=2.13.0 <4.0.0'
 
 dependencies:
   shelf: ^1.0.0
