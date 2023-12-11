@@ -1,4 +1,4 @@
-## 4.0.2
+## 4.1.0
 
 - `createGzipMiddleware` and `gzipEncodeResponse`:
   - Added parameters `addServerTiming` and `serverTimingEntryName`. 
