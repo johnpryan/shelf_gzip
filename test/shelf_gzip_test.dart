@@ -17,6 +17,7 @@ void main() {
       var pipeline = const Pipeline()
           .addMiddleware(logRequests())
           .addMiddleware(gzipMiddleware);
+
       var handler = pipeline.addHandler((request) {
         var requestedUri = request.requestedUri;
         var path = requestedUri.path;
@@ -67,6 +68,60 @@ void main() {
       server.close();
     });
 
+    test('Check added headers', () async {
+      // `shelf` Pipeline:
+      var pipeline = const Pipeline()
+          .addMiddleware(logRequests())
+          .addMiddleware(createGzipMiddleware(
+            addCompressionRatioHeader: true,
+            addServerTiming: true,
+            serverTimingEntryName: 'x-gzip',
+          ));
+
+      var handler = pipeline.addHandler((request) {
+        var requestedUri = request.requestedUri;
+        return Response.ok('Requested: $requestedUri');
+      });
+
+      var server = await serve(handler, 'localhost', 0);
+
+      var port = server.port;
+
+      var baseURL = 'http://localhost:$port';
+
+      print('baseURL: $baseURL');
+
+      // No gzip, small body:
+      expect(
+          await _getURL(
+            '$baseURL/foo',
+            expectedContentEncoding: '',
+            compressionState: HttpClientResponseCompressionState.notCompressed,
+            expectedHeaders: {
+              'x-compression-ratio': isNull,
+              'server-timing': isNull,
+            },
+          ),
+          equals('Requested: http://localhost:$port/foo'));
+
+      var longValue = 'long_value_'.padRight(1024, 'x');
+
+      // Expected gzip, long body:
+      expect(
+          await _getURL(
+            '$baseURL/$longValue',
+            expectedContentEncoding: 'gzip',
+            compressionState: HttpClientResponseCompressionState.decompressed,
+            expectedHeaders: {
+              'x-compression-ratio': isNotEmpty,
+              'server-timing': startsWith('x-gzip;dur='),
+            },
+          ),
+          equals('Requested: http://localhost:$port/$longValue'));
+
+      server.close();
+    });
+
     test('isAlreadyCompressedExtension', () async {
       expect(isAlreadyCompressedExtension('gz'), isTrue);
       expect(isAlreadyCompressedExtension('gzip'), isTrue);
@@ -105,7 +160,8 @@ Future<String> _getURL(String url,
     {Map<String, dynamic>? parameters,
     String? expectedContentType,
     String? expectedContentEncoding,
-    HttpClientResponseCompressionState? compressionState}) async {
+    HttpClientResponseCompressionState? compressionState,
+    Map<String, dynamic>? expectedHeaders}) async {
   var uri = Uri.parse(url);
 
   if (parameters != null) {
@@ -152,6 +208,15 @@ Future<String> _getURL(String url,
 
   if (compressionState != null) {
     expect(response.compressionState, equals(compressionState));
+  }
+
+  if (expectedHeaders != null) {
+    print('HttpClientResponse Headers:');
+    response.headers.forEach((k, v) => print('-- $k: $v'));
+
+    for (var e in expectedHeaders.entries) {
+      expect(response.headers.value(e.key), e.value);
+    }
   }
 
   var data = await response.transform(Latin1Decoder()).toList();
